@@ -1,0 +1,12 @@
+APP_NAME: 'Review Analyser'
+VERSION: '1.0.0'
+
+AWS:
+  S3_BUCKET: 'review-analyser'
+  REGION: 'ap-south-1'
+
+SNOWFLAKE:
+  CONNECTION_NAME: 'ANALYZER_CONN'
+  ROLE: 'ANALYSER_DEV'
+
+
