@@ -60,6 +60,7 @@ def group_reviews_by_cluster(documents: list, metadatas: list, labels: list) -> 
 # Get closest reviews to each cluster centroid
 def get_closest_to_centroid_flags(embeddings, labels, kmeans_model, top_n=30):
     is_close_flag = np.zeros(len(labels), dtype=bool)  # Default all to False
+    ranks = np.zeros(len(labels), dtype=int) # To store ranks
 
     for cluster_id in range(kmeans_model.n_clusters):
         # Indices of reviews in this cluster
@@ -80,7 +81,14 @@ def get_closest_to_centroid_flags(embeddings, labels, kmeans_model, top_n=30):
         # Mark them True
         is_close_flag[closest_indices] = True
 
-    return is_close_flag
+        # Get sorted indices (closest first)
+        sorted_indices = np.argsort(distances)
+
+        # Assign ranks (1 = closest)
+        cluster_ranks = np.arange(1, len(sorted_indices) + 1)
+        ranks[cluster_indices[sorted_indices]] = cluster_ranks
+
+    return is_close_flag, ranks
 
 # build a DataFrame from clustered reviews
 def build_cluster_dataframe(documents, metadatas, labels, is_close_flag):
@@ -110,10 +118,12 @@ def cluster_reviews_from_chroma(k: int = 10):
     labels, kmeans = cluster_embeddings_kmeans(embeddings, k=k)
 
      # Determine closest-to-centroid flags
-    is_close_flag = get_closest_to_centroid_flags(embeddings, labels, kmeans, top_n=30)
+    is_close_flag, ranks = get_closest_to_centroid_flags(embeddings, labels, kmeans, top_n=30)
 
 
     df = build_cluster_dataframe(documents, metadatas, labels, is_close_flag)
+
+    df['centroid_rank'] = ranks
     print(df.head()) 
 
     df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce')

@@ -4,10 +4,15 @@ import time
 import re
 import numpy as np
 import pandas as pd
-from utils.db_operations import retrieve_table_as_df, retrieve_values_closest_to_centroid, create_table_from_df
+import nltk
+from datetime import datetime
+from nltk.data import find
+from nltk.sentiment import SentimentIntensityAnalyzer
 from google import genai
 from google.genai import types
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from utils.db_operations import retrieve_table_as_df, retrieve_values_closest_to_centroid, create_table_from_df
+
 
 
 # function to retrieve all reviews from the database
@@ -45,7 +50,7 @@ def get_reviews_for_llm(df_closest: pd.DataFrame, df_all: pd.DataFrame) -> pd.Da
 
 # function to summarize reviews 
 
-def summarize_reviews(cluster_id, cluster_texts, api_key, max_retries=5, base_delay=1, max_delay=10):
+def summarize_reviews(cluster_id, cluster_texts, api_key, max_retries=15, base_delay=1, max_delay=10):
     client = genai.Client(api_key=api_key)
 
     prompt = f"""
@@ -107,7 +112,7 @@ def summarize_reviews(cluster_id, cluster_texts, api_key, max_retries=5, base_de
 def process_cluster(cluster_id, df_reviews_for_llm, api_key):
     max_retries=5
     base_delay=1
-    max_delay=10
+    max_delay=15
     cluster_reviews = df_reviews_for_llm[df_reviews_for_llm['cluster_id'] == cluster_id]['review']
     cluster_texts = "\n".join(cluster_reviews.tolist())
     summary = summarize_reviews(cluster_id, cluster_texts, api_key, max_retries, base_delay, max_delay)
@@ -115,6 +120,16 @@ def process_cluster(cluster_id, df_reviews_for_llm, api_key):
         "cluster_id": cluster_id,
         "summary": summary
     }
+
+
+def classify_sentiment(score):
+    if score >= 0.1:
+        return "positive"
+    elif score <= -0.1:
+        return "negative"
+    else:
+        return "neutral"
+    
 
 # main function to retrieve reviews and prepare them for LLM processing
 def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name: str):
@@ -131,25 +146,81 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
         ignore_index=True
         ).drop_duplicates()
 
-    print(df_reviews_for_llm)
+    total_reviews = len(df_all_reviews)
+    cluster_volumes = (
+        df_all_reviews.groupby('cluster_id')
+        .size()
+        .reset_index(name='cluster_size')
+    )
+    cluster_volumes['volume_percent'] = (
+        cluster_volumes['cluster_size'] / total_reviews * 100
+    )
+     
+    print(cluster_volumes)
 
+    top_reviews_per_cluster = (
+        df_all_reviews.sort_values(["cluster_id", "centroid_rank"])
+        .groupby("cluster_id", group_keys=False)
+        .head(3)
+    )
     # create_table_from_df(df_reviews_for_llm, 'reviews_for_llm')
 
+
+    print(df_all_reviews)
     cluster_summaries = []
 
     cluster_ids = df_reviews_for_llm['cluster_id'].unique()
 
+    try:
+        find('sentiment/vader_lexicon.zip')
+    except LookupError:
+        nltk.download('vader_lexicon')
+
+    sia = SentimentIntensityAnalyzer()
+    df_all_reviews["sentiment_score"] = df_all_reviews["review"].apply(lambda x: sia.polarity_scores(x)["compound"])
+
+    df_all_reviews["sentiment_label"] = df_all_reviews["sentiment_score"].apply(classify_sentiment)
+
+    cluster_sentiment_counts = (
+        df_all_reviews.groupby("cluster_id")["sentiment_label"]
+        .value_counts()
+        .unstack(fill_value=0)
+        .reset_index()
+        .rename(columns={
+            "positive": "positive_count",
+            "negative": "negative_count",
+            "neutral": "neutral_count"
+        })
+    )
+    print(df_all_reviews)
+
+    now = datetime.now()
 
     # cluster_summaries = []
     for cluster_id in df_reviews_for_llm['cluster_id'].unique():
         cluster_reviews = df_reviews_for_llm[df_reviews_for_llm['cluster_id'] == cluster_id]['review']
         cluster_texts = "\n".join(cluster_reviews.tolist())
         
+        top_reviews = top_reviews_per_cluster[top_reviews_per_cluster["cluster_id"] == cluster_id]["review"].tolist()
         title, description = summarize_reviews(cluster_id, cluster_texts, api_key)
+
+        volume_percent = cluster_volumes.loc[
+            cluster_volumes['cluster_id'] == cluster_id, 'volume_percent'
+        ].iloc[0]
+
+        sentiment_row = cluster_sentiment_counts[cluster_sentiment_counts["cluster_id"] == cluster_id].iloc[0]
+
+
         cluster_summaries.append({
             "cluster_id": cluster_id,
             "title": title,
-            "description": description
+            "description": description,
+            "top_reviews": top_reviews,
+            "volume_percent": volume_percent,
+            "positive_count": sentiment_row["positive_count"],
+            "negative_count": sentiment_row["negative_count"],
+            "neutral_count": sentiment_row["neutral_count"],
+            "datetime": now
         })
     # # Convert summaries to a DataFrame and save
    
@@ -167,6 +238,7 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
     #             print(f"Error processing cluster {cid}: {e}")
 
     df_summaries = pd.DataFrame(cluster_summaries)
+    df_summaries['datetime'] = pd.to_datetime(df_summaries['datetime'], errors='coerce')
     print(df_summaries)
 
 
