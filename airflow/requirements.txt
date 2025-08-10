@@ -12,3 +12,6 @@ snowflake-snowpark-python
 google-genai
 nltk
 streamlit
+scikit-learn
+langchain_chroma
+

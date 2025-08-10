@@ -16,4 +16,4 @@ from stages.summarize import main as summarize_reviews_main
 #     table_name="CLUSTERED_REVIEWS"
 # )
 
-summarize_reviews_main()
+extract_and_clean_main()

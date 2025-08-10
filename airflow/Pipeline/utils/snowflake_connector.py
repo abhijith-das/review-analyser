@@ -4,14 +4,37 @@ import snowflake.connector
 from snowflake.snowpark import Session
 from snowflake.snowpark.context import get_active_session
 
-from utils.read_config import get_sf_conn_name, get_sf_role
+# from utils.read_config import get_sf_conn_name, get_sf_role
 
 
 def get_snowflake_session():
     try:
         get_active_session()
     except Exception:
-        conn = snowflake.connector.connect(connection_name=get_sf_conn_name(), role=get_sf_role())
+
+
+        with open('../stages/credentials.json', "r") as f:
+            creds = json.load(f)
+
+        sf = creds.get("snowflake", {})
+        account = sf.get("account")
+        user = sf.get("user")
+        role = sf.get("role")
+        password = sf.get("password")
+        database = sf.get("database")
+        schema = sf.get("schema")
+        warehouse = sf.get("warehouse")
+
+        # Connect to Snowflake
+        conn = snowflake.connector.connect(
+            account=account,
+            user=user,
+            password=password,
+            role=role,
+            database=database,
+            schema=schema,
+            warehouse=warehouse
+        )
         # print(conn)
         return conn  
         

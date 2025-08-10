@@ -4,7 +4,7 @@ import shutil
 import pandas as pd
 from tqdm import tqdm
 from sentence_transformers import SentenceTransformer
-from langchain_community.vectorstores import Chroma
+# from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
 from utils.read_config import get_embed_config, get_source_file_cols

@@ -60,6 +60,7 @@
 !.github
 !empty
 !Dockerfile
+!requirements.txt
 !prod_image_installed_providers.txt
 
 # This folder is for you if you want to add any packages to the docker context when you build your own

@@ -3,10 +3,11 @@ import boto3
 import io
 import os
 from utils.read_config import get_preprocess_config, get_source_file_cols
+from utils.aws_connector import get_aws_s3_client
 
 # function to read the reviews stored in a CSV file in an S3 bucket,
 def load_csv_from_s3(bucket: str, key: str) -> pd.DataFrame:
-    s3 = boto3.client("s3")
+    s3 = get_aws_s3_client()
     obj = s3.get_object(Bucket=bucket, Key=key)
     return pd.read_csv(io.BytesIO(obj['Body'].read()))
 

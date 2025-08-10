@@ -40,14 +40,14 @@
 #
 # Feel free to modify this file to suit your needs.
 ---
-version: '3'
+# version: '3'
 x-airflow-common:
   &airflow-common
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.5.1}
-  # build: .
+  # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.3}
+  build: .
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
@@ -60,12 +60,14 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
+    _PIP_ADDITIONAL_REQUIREMENTS: '' #"tqdm pandas boto3 fastparquet pyarrow langchain langchain-community langchain-huggingface sentence_transformers snowflake-connector-python snowflake-snowpark-python google-genai nltk streamlit"
+
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
+    - ${AIRFLOW_PROJ_DIR:-.}/Pipeline:/opt/airflow/Pipeline
 
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
@@ -178,7 +180,7 @@ services:
         }
         airflow_version=$$(AIRFLOW__LOGGING__LOGGING_LEVEL=INFO && gosu airflow airflow version)
         airflow_version_comparable=$$(ver $${airflow_version})
-        min_airflow_version=2.2.0
+        min_airflow_version=2.8.2
         min_airflow_version_comparable=$$(ver $${min_airflow_version})
         if (( airflow_version_comparable < min_airflow_version_comparable )); then
           echo
