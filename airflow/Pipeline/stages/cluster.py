@@ -8,6 +8,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from sklearn.cluster import KMeans
 
 from utils.db_operations import create_table_from_df
+from utils.read_config import get_cluster_config, get_tbl_clustered_reviews, get_source_file_cols
 
 # Load documents and embeddings from Chroma
 def load_from_chroma_store(persist_directory: str = "chroma_store") -> tuple:
@@ -50,10 +51,12 @@ def cluster_embeddings_kmeans(embeddings: np.ndarray, k: int = 10) -> list:
 # Group reviews and products by cluster
 def group_reviews_by_cluster(documents: list, metadatas: list, labels: list) -> dict:
     clusters = {}
+
+    cols = get_source_file_cols()
     for label, doc, meta in zip(labels, documents, metadatas):
         clusters.setdefault(label, []).append({
-            "text": doc,
-            "product": meta.get("product", "unknown")
+            cols["TEXT"]: doc,
+            cols["PRODUCT"]: meta.get(cols["PRODUCT"], "unknown")
         })
     return clusters
 
@@ -95,24 +98,27 @@ def build_cluster_dataframe(documents, metadatas, labels, is_close_flag):
     records = []
     now = datetime.now()
 
+    clstr_tbl = get_tbl_clustered_reviews()
+    clstr_tbl_cols = clstr_tbl["COLUMNS"]
+
     for i, (doc, meta, label, close_flag) in enumerate(zip(documents, metadatas, labels, is_close_flag)):
         record = {
-            "review_id": str(uuid.uuid4()),  # Unique identifier
-            "cluster_id": int(label),
-            "review": doc,
-            "datetime": now,
-            "product": meta.get("product", "unknown"),
-            "is_close_to_centroid": close_flag
+            clstr_tbl_cols["REVIEW_ID"]: str(uuid.uuid4()),  # Unique identifier
+            clstr_tbl_cols["CLUSTER_ID"]: int(label),
+            clstr_tbl_cols["REVIEW"]: doc,
+            clstr_tbl_cols["DATETIME"]: now,
+            clstr_tbl_cols["PRODUCT"]: meta.get("product", "unknown"),
+            clstr_tbl_cols["IS_CLOSE_TO_CENTROID"]: close_flag
         }
         records.append(record)
 
     return pd.DataFrame(records)
 
 # Main logic
-def cluster_reviews(k: int = 10):
+def cluster_reviews(path,target_tbl_name, k: int = 10):
     print(f"Loading documents from parquet file")
-    documents, metadatas, embeddings = load_from_parquet("stages/parquets/reviews_with_embeddings.parquet")
-    print(metadatas[:3])  # Print first 3 metadata for verification
+    documents, metadatas, embeddings = load_from_parquet(path)
+    # print(metadatas[:3])  # Print first 3 metadata for verification
     print(f"Loaded {len(documents)} documents from parquet file")
 
     labels, kmeans = cluster_embeddings_kmeans(embeddings, k=k)
@@ -123,12 +129,14 @@ def cluster_reviews(k: int = 10):
 
     df = build_cluster_dataframe(documents, metadatas, labels, is_close_flag)
 
-    df['centroid_rank'] = ranks
+    clstr_tbl = get_tbl_clustered_reviews()
+    clstr_tbl_cols = clstr_tbl["COLUMNS"]
+    df[clstr_tbl_cols['CENTROID_RANK']] = ranks
     print(df.head()) 
 
-    df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce')
+    df[clstr_tbl_cols['DATETIME']] = pd.to_datetime(df[clstr_tbl_cols['DATETIME']], errors='coerce')
 
-    create_table_from_df(df, "CLUSTERED_REVIEWS", mode='overwrite')
+    create_table_from_df(df, target_tbl_name, mode='overwrite')
 
     # print(labels)
     # print(f"Clustered documents and generated {len(labels)} labels")
@@ -153,4 +161,9 @@ def cluster_reviews(k: int = 10):
 
 # Main function for the Airflow DAG
 def main():
-    cluster_reviews(k=10)
+    config = get_cluster_config()
+    cluster_reviews(
+        path=config["source"]["parquet_file"],
+        target_tbl_name=config["target"]["table_name"],
+        k=config["k"]
+    )

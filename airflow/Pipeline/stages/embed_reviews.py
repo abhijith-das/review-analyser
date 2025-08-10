@@ -1,11 +1,13 @@
 import os
 import uuid
 import shutil
-from sentence_transformers import SentenceTransformer
 import pandas as pd
+from tqdm import tqdm
+from sentence_transformers import SentenceTransformer
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document
+from utils.read_config import get_embed_config, get_source_file_cols
 
 # function to load a specific text column from a parquet file
 def load_parquet_columns(parquet_path: str, text_column: str = "text", product_column: str = "product") -> list:
@@ -50,7 +52,8 @@ def store_in_chroma_store(documents: list, embedding_function: HuggingFaceEmbedd
 def store_as_parquet(documents: list, embedding_function: HuggingFaceEmbeddings, output_path: str):
     print("Generating embeddings and building records...")
     records = []
-    for doc in documents:
+    total_docs = len(documents)
+    for doc in tqdm(documents, desc="Processing documents", unit="doc"):
         embedding = embedding_function.embed_query(doc.page_content)
         records.append({
             "review_id": doc.metadata["id"],
@@ -65,7 +68,8 @@ def store_as_parquet(documents: list, embedding_function: HuggingFaceEmbeddings,
 
 
 # main function to process the parquet file, convert texts to Document objects, and store them in Chroma
-def process_and_store(parquet_path: str, text_column: str = "text", product_column: str = "product", persist_directory: str = "chroma_store"):
+def process_and_store(parquet_path: str, output_path: str, text_column: str = "text", product_column: str = "product"):
+    print(f"Loading texts from parquet file: '{parquet_path}'")
     texts, products = load_parquet_columns(parquet_path, text_column, product_column)
     print(f"Loaded {len(texts)} texts from column '{text_column}' and '{product_column}'")
 
@@ -78,13 +82,16 @@ def process_and_store(parquet_path: str, text_column: str = "text", product_colu
     # print(documents[:3])  
 
     # store_in_chroma_store(documents, embedding_function, persist_directory)
-    output_path="parquets/reviews_with_embeddings.parquet"
+    # output_path="parquets/reviews_with_embeddings.parquet"
     store_as_parquet(documents, embedding_function, output_path)
 
-
-process_and_store(
-    parquet_path="parquets/cleaned_reviews.parquet",
-    text_column="text",
-    product_column="product",
-    persist_directory="chroma_store"
-)
+# main function for the airflow DAG
+def main():
+    embed_config = get_embed_config()
+    cols = get_source_file_cols()
+    process_and_store(
+        parquet_path=embed_config["source"]["parquet_file"],
+        output_path=embed_config["target"]["parquet_file"],
+        text_column=cols["TEXT"],
+        product_column= cols["PRODUCT"]
+    )

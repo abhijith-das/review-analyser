@@ -11,7 +11,7 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from google import genai
 from google.genai import types
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils.read_config import get_gemma_model, get_gemma_config
+from utils.read_config import get_gemma_model, get_gemma_config, get_tbl_clustered_summaries, get_tbl_clustered_reviews
 from utils.db_operations import retrieve_table_as_df, retrieve_values_closest_to_centroid, create_table_from_df
 
 
@@ -35,14 +35,16 @@ def get_reviews_closest_to_centroid(db_name: str, schema_name: str, table_name: 
 # function to create a Dataframe of reviews closest to the centroid and 20 random reviews in the same cluster
 def get_reviews_for_llm(df_closest: pd.DataFrame, df_all: pd.DataFrame) -> pd.DataFrame:
 
+    clstrd_tbl = get_tbl_clustered_reviews()
+    clstr_tbl_cols = clstrd_tbl["COLUMNS"]
     if df_closest.empty or df_all.empty:
         raise ValueError("DataFrames for closest reviews or all reviews are empty.")
     print(df_all)
-    unique_labels = df_closest['cluster_id'].unique()
+    unique_labels = df_closest[clstr_tbl_cols['CLUSTER_ID']].unique()
     reviews_for_cluster = []
     for label in unique_labels: 
         # Get 20 random reviews from the same cluster with flag is_close_to_centroid as False
-        random_reviews = df_all[(df_all['cluster_id'] == label) & (df_all['is_close_to_centroid'] == 'false')].sample(n=20, random_state=42)
+        random_reviews = df_all[(df_all[clstr_tbl_cols['CLUSTER_ID']] == label) & (df_all[clstr_tbl_cols['IS_CLOSE_TO_CENTROID']] == 'false')].sample(n=20, random_state=42)
 
         reviews_for_cluster.extend(random_reviews.to_dict('records'))
 
@@ -146,6 +148,16 @@ def classify_sentiment(score):
 # main function to retrieve reviews and prepare them for LLM processing
 def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name: str):
 
+    ''' 
+    create a json file in stages directory with following format:
+    {
+        "gemini": {
+            "model": "gemma-3-27b-it",
+            "api_key": "<add_your_api_key_here>"
+        }
+    }
+    '''
+
     with open('./stages/credentials.json') as f:
         credentials = json.load(f)
         api_key = credentials['gemini']['api_key']
@@ -158,21 +170,26 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
         ignore_index=True
         ).drop_duplicates()
 
+    smmry_tbl = get_tbl_clustered_summaries()
+    smmry_tbl_cols = smmry_tbl["COLUMNS"]
+
+    rvw_tbl = get_tbl_clustered_reviews()
+    rvw_tbl_cols = rvw_tbl["COLUMNS"]
     total_reviews = len(df_all_reviews)
     cluster_volumes = (
-        df_all_reviews.groupby('cluster_id')
+        df_all_reviews.groupby(rvw_tbl_cols['CLUSTER_ID'])
         .size()
         .reset_index(name='cluster_size')
     )
-    cluster_volumes['volume_percent'] = (
+    cluster_volumes[smmry_tbl_cols['VOLUME_PERCENT']] = (
         cluster_volumes['cluster_size'] / total_reviews * 100
     )
      
     print(cluster_volumes)
 
     top_reviews_per_cluster = (
-        df_all_reviews.sort_values(["cluster_id", "centroid_rank"])
-        .groupby("cluster_id", group_keys=False)
+        df_all_reviews.sort_values([rvw_tbl_cols['CLUSTER_ID'], rvw_tbl_cols['CENTROID_RANK']])
+        .groupby(rvw_tbl_cols['CLUSTER_ID'], group_keys=False)
         .head(3)
     )
     # create_table_from_df(df_reviews_for_llm, 'reviews_for_llm')
@@ -181,7 +198,7 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
     print(df_all_reviews)
     cluster_summaries = []
 
-    cluster_ids = df_reviews_for_llm['cluster_id'].unique()
+    # cluster_ids = df_reviews_for_llm['cluster_id'].unique()
 
     try:
         find('sentiment/vader_lexicon.zip')
@@ -224,15 +241,15 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
 
 
         cluster_summaries.append({
-            "cluster_id": cluster_id,
-            "title": title,
-            "description": description,
-            "top_reviews": top_reviews,
-            "volume_percent": volume_percent,
-            "positive_count": sentiment_row["positive_count"],
-            "negative_count": sentiment_row["negative_count"],
-            "neutral_count": sentiment_row["neutral_count"],
-            "datetime": now
+            smmry_tbl_cols['CLUSTER_ID']: cluster_id,
+            smmry_tbl_cols['TITLE']: title,
+            smmry_tbl_cols['DESCRIPTION']: description,
+            smmry_tbl_cols['TOP_REVIEWS']: top_reviews,
+            smmry_tbl_cols['VOLUME_PERCENT']: volume_percent,
+            smmry_tbl_cols['POSITIVE_COUNT']: sentiment_row["positive_count"],
+            smmry_tbl_cols['NEGATIVE_COUNT']: sentiment_row["negative_count"],
+            smmry_tbl_cols['NEUTRAL_COUNT']: sentiment_row["neutral_count"],
+            smmry_tbl_cols['DATETIME']: now
         })
     # # Convert summaries to a DataFrame and save
    
@@ -250,11 +267,11 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
     #             print(f"Error processing cluster {cid}: {e}")
 
     df_summaries = pd.DataFrame(cluster_summaries)
-    df_summaries['datetime'] = pd.to_datetime(df_summaries['datetime'], errors='coerce')
+    df_summaries[smmry_tbl_cols['DATETIME']] = pd.to_datetime(df_summaries['datetime'], errors='coerce')
     print(df_summaries)
 
 
-    create_table_from_df(df_summaries, 'cluster_summaries', mode='append')
+    create_table_from_df(df_summaries, smmry_tbl['TABLE'], mode='append')
 
 # main function for the airflow DAG
 def main():

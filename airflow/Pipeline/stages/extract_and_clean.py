@@ -1,7 +1,8 @@
 import pandas as pd
 import boto3
 import io
-import re
+import os
+from utils.read_config import get_preprocess_config, get_source_file_cols
 
 # function to read the reviews stored in a CSV file in an S3 bucket,
 def load_csv_from_s3(bucket: str, key: str) -> pd.DataFrame:
@@ -24,13 +25,17 @@ def preprocess_s3_csv(bucket: str, key: str, column: str, output_path: str):
     df_clean = preprocess_reviews(df, column)
     print(f"After cleaning: {len(df_clean)} rows")
     print(df_clean)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df_clean.to_parquet(output_path, index=False)
     print(f"Saved cleaned reviews to {output_path}")
 
-
-preprocess_s3_csv(
-    bucket="review-analyser",
-    key="Input/reviews.csv",
-    column="text",
-    output_path="parquets/cleaned_reviews.parquet"
-)
+# main function for the airflow DAG
+def main():
+    configs = get_preprocess_config()
+    cols = get_source_file_cols()
+    preprocess_s3_csv(
+        bucket=configs["source"]["s3_bucket"],
+        key=configs["source"]["path"] + "/" + configs["source"]["file_name"],
+        column=cols["TEXT"],
+        output_path= configs["target"]["parquet_file"]
+    )

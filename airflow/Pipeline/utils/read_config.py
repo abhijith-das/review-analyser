@@ -14,7 +14,7 @@ def read_config() -> dict:
 # Function to read a data_config.yaml file
 def read_data_config() -> dict:
     current_dir = os.getcwd()
-    config_path = os.path.join(current_dir, "data_config.yaml")
+    config_path = os.path.join(current_dir, "utils/data_config.yaml")
     with open(config_path, 'r',  encoding="utf-8",) as file:
         config = yaml.safe_load(file)
     return config
@@ -42,3 +42,59 @@ def get_gemma_config():
         "top_k": config["GEMMA"]["TOP_K"]
     }
     return gemma_config  
+
+def get_source_file_cols():
+    config = read_data_config()
+    source_file_cols = config["SOURCE_FILES"]["INPUT_CSV"]
+    return source_file_cols
+
+def get_tbl_clustered_reviews():
+    config = read_data_config()
+    tbl_clustered_reviews = config["CLUSTERED_REVIEWS_TBL"]
+    return tbl_clustered_reviews
+
+def get_tbl_clustered_summaries():
+    config = read_data_config()
+    tbl_clustered_reviews = config["CLUSTER_SUMMARIES_TBL"]
+    return tbl_clustered_reviews
+
+
+def get_preprocess_config():
+    config = read_data_config()
+    preprocess_config = {
+        "source": {
+            "s3_bucket": config["PREPROCESS"]["SOURCE"]["S3_BUCKET"],
+            "path": config["PREPROCESS"]["SOURCE"]["PATH"],
+            "file_name": config["PREPROCESS"]["SOURCE"]["FILE_NAME"]
+        },
+        "target": {
+            "parquet_file": config["PREPROCESS"]["TARGET"]["PARQUET_FILE"]
+        }
+    }
+    return preprocess_config
+
+def get_embed_config():
+    config = read_data_config()
+    embed_config = {
+        "source": { 
+            "parquet_file": config["EMBED"]["SOURCE"]["PARQUET_FILE"]
+        },
+        "target": { 
+            "parquet_file": config["EMBED"]["TARGET"]["PARQUET_FILE"]
+        }
+    }
+    return embed_config
+
+def get_cluster_config():
+    config = read_data_config()
+    cluster_config = {  
+        "source": {
+            "parquet_file": config["CLUSTER"]["SOURCE"]["PARQUET_FILE"]
+        },
+        "target": {
+            "table_name": config["CLUSTER"]["TARGET"]["TABLE_NAME"]
+        },  
+        "k": config["CLUSTER"]["CLUSTERING_PARAMS"]["K"]
+    }
+    return cluster_config
+
