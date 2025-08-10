@@ -255,3 +255,10 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
 
 
     create_table_from_df(df_summaries, 'cluster_summaries', mode='append')
+
+# main function for the airflow DAG
+def main():
+    summarize_and_sentiment_analysis(db_name="ANALYSER_DB",
+    schema_name="ANALYSER_SCHEMA",
+    table_name="CLUSTERED_REVIEWS"
+    )

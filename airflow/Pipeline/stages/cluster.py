@@ -109,7 +109,7 @@ def build_cluster_dataframe(documents, metadatas, labels, is_close_flag):
     return pd.DataFrame(records)
 
 # Main logic
-def cluster_reviews_from_chroma(k: int = 10):
+def cluster_reviews(k: int = 10):
     print(f"Loading documents from parquet file")
     documents, metadatas, embeddings = load_from_parquet("stages/parquets/reviews_with_embeddings.parquet")
     print(metadatas[:3])  # Print first 3 metadata for verification
@@ -150,3 +150,7 @@ def cluster_reviews_from_chroma(k: int = 10):
     #     for item in grouped_items[:3]:
     #         print(f"- {item['text'][:100]}... ({item['product']})")
 
+
+# Main function for the Airflow DAG
+def main():
+    cluster_reviews(k=10)

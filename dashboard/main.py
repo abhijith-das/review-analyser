@@ -1,5 +1,7 @@
 import ast
 import streamlit as st
+import datetime
+from datetime import date,timedelta
 from utils.db_operations import retrieve_table_as_df_for_a_date
 from utils.read_config import get_tbl_clstr_smmrs
 import plotly.express as px
@@ -7,14 +9,22 @@ import plotly.express as px
 def main():
     st.title("Review Analyser Dashboard")
 
+    today = datetime.datetime.now()
+    last_year = today.year - 1
+    last_yr_date = datetime.date(last_year, 12, 31)
     # st.subheader("Select Date")
-    date = st.sidebar.date_input("Select Date", value="today", min_value=None, max_value="today")
+    from_date = st.sidebar.date_input(
+        "Select Date", 
+        (today, today), 
+        last_yr_date, 
+        today
+        )
 
     # st.write(f"You selected: {date}")
     smmrs = get_tbl_clstr_smmrs()
     smmrs_cols = smmrs["COLUMNS"]
 
-    smmry_data = retrieve_table_as_df_for_a_date(date)
+    smmry_data = retrieve_table_as_df_for_a_date(from_date)
     # smmry_data = smmry_data.drop(smmry_data.columns[0], axis=1)
 
     if smmry_data.empty:
