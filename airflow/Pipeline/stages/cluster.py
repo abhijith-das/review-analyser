@@ -128,7 +128,7 @@ def cluster_reviews_from_chroma(k: int = 10):
 
     df['datetime'] = pd.to_datetime(df['datetime'], errors='coerce')
 
-    create_table_from_df(df, "CLUSTERED_REVIEWS")
+    create_table_from_df(df, "CLUSTERED_REVIEWS", mode='overwrite')
 
     # print(labels)
     # print(f"Clustered documents and generated {len(labels)} labels")

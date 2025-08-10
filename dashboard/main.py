@@ -8,7 +8,7 @@ def main():
     st.title("Review Analyser Dashboard")
 
     # st.subheader("Select Date")
-    date = st.date_input("Select Date", value="today", min_value=None, max_value="today")
+    date = st.sidebar.date_input("Select Date", value="today", min_value=None, max_value="today")
 
     # st.write(f"You selected: {date}")
     smmrs = get_tbl_clstr_smmrs()
@@ -16,6 +16,10 @@ def main():
 
     smmry_data = retrieve_table_as_df_for_a_date(date)
     # smmry_data = smmry_data.drop(smmry_data.columns[0], axis=1)
+
+    if smmry_data.empty:
+        st.warning("No data available for the selected date.")
+        return
 
     all_titles = smmry_data[smmrs_cols['TITLE']].unique().tolist()
 
@@ -30,11 +34,12 @@ def main():
         selected_titles = selected
     # st.dataframe(smmry_data, use_container_width=True)
     expanded = True
+    graph_id = 0
     for title in selected_titles:
         with st.expander(title, expanded=expanded):
             # Filter rows for this title
             title_data = smmry_data[smmry_data[smmrs_cols['TITLE']] == title]
-            st.subheader(title)
+            st.subheader(title, divider=True)
             st.write(title_data[smmrs_cols['DESCRIPTION']].iloc[0])
             # st.progress(float(title_data[smmrs_cols['VOLUME_PERCENT']]) / 100)
             # st.write(title_data[smmrs_cols['TOP_REVIEWS']].iloc[0])
@@ -55,7 +60,7 @@ def main():
                     hole=0.4
                 )
                 fig.update_traces(textinfo='label+percent')
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key=f"volume_pie_chart_{graph_id}")
             with col2:
                 # st.metric(label="Sentiment", value=title_data[smmrs_cols['SENTIMENT']].iloc[0])
                 fig = px.pie(
@@ -75,7 +80,8 @@ def main():
                     hole=0.4
                 )
                 fig.update_traces(textinfo='label+percent')
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key=f"sentiment_pie_chart_{graph_id}")
+            graph_id = graph_id+1
             expanded = False  
 
 

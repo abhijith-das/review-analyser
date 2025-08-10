@@ -60,7 +60,7 @@ def store_as_parquet(documents: list, embedding_function: HuggingFaceEmbeddings,
             "embedding": embedding
         })
     df = pd.DataFrame(records)
-    df.to_parquet(output_path, index=False)
+    df.to_parquet(output_path, compression='snappy', index=False)
     print(f"Saved {len(df)} records with embeddings to {output_path}")
 
 

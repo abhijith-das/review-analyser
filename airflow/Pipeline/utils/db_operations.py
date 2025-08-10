@@ -26,9 +26,10 @@ def create_table_structure(conn, df: pd.DataFrame, table_name: str):
     print(f"Table '{table_name}' created.")
 
 
-def create_table_from_df(df, table_name):
+def create_table_from_df(df, table_name, mode='overwrite'):
     conn = get_snowflake_session()
-    create_table_structure(conn, df, table_name)
+    if mode == 'overwrite':
+        create_table_structure(conn, df, table_name)
     success, nchunks, nrows, _ = write_pandas(conn, df, table_name, use_logical_type=True)
     print(f"Uploaded {nrows} rows to {table_name}")
 

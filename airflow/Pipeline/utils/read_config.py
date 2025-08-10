@@ -28,3 +28,17 @@ def get_sf_role():
     config = read_config()
     role = config["SNOWFLAKE"]["ROLE"]
     return role
+
+def get_gemma_model():
+    config = read_config()
+    model = config["GEMMA"]["MODEL"]
+    return model
+
+def get_gemma_config():
+    config = read_config()
+    gemma_config = {
+        "temperature": config["GEMMA"]["TEMPERATURE"],
+        "top_p": config["GEMMA"]["TOP_P"],
+        "top_k": config["GEMMA"]["TOP_K"]
+    }
+    return gemma_config  

@@ -11,6 +11,7 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from google import genai
 from google.genai import types
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from utils.read_config import get_gemma_model, get_gemma_config
 from utils.db_operations import retrieve_table_as_df, retrieve_values_closest_to_centroid, create_table_from_df
 
 
@@ -54,18 +55,28 @@ def summarize_reviews(cluster_id, cluster_texts, api_key, max_retries=15, base_d
     client = genai.Client(api_key=api_key)
 
     prompt = f"""
-    You are given a set of product reviews belonging to the same cluster.
-
-    Cluster ID: {cluster_id}
-    Reviews:
-    {cluster_texts}
+    You are an executive of a company.
+    You are given a set of product reviews from the same cluster.
 
     Task:
-    1. Generate a short, catchy title (max 6 words) summarizing the main theme.
-    2. Write a concise 2-3 sentence description summarizing the main idea of this cluster.
-    Format the response as:
-    Title: <title>
-    Description: <description>
+    1. Generate a short title (max 8 words) suited for the main theme of the reviews of the cluster.
+    2. Write a concise, actionable description (max 50 words) summarizing the main idea of this cluster.
+    3. Ensure the title and description are clear and understandable to executives who want to decide quickly what to address next.
+    4. Focus on insight, not just summary—Use plain, professional English that is easily understandable by non-technical stakeholders.
+
+    Context:
+    - The reviews are from a specific cluster.
+    - Executives must be able to scan the title and description to grasp the main takeaway.
+    - The title and description should be concise and informative. Avoid vague language—be specific and impactful.
+
+    Inputs:
+        Cluster ID: {cluster_id}
+        Reviews:
+        {cluster_texts}
+        
+    Output format:
+        Title: <title>
+        Description: <description>
     """
   
     # response = client.models.generate_content(
@@ -80,16 +91,17 @@ def summarize_reviews(cluster_id, cluster_texts, api_key, max_retries=15, base_d
 
     # print(response.text)
 
-
+    gemma_config = get_gemma_config()
+    # Exponetial backoff retry logic
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model="gemma-3-27b-it",
+                model= get_gemma_model(),
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0.1,
-                    top_p=0.5,
-                    top_k=20
+                    temperature=gemma_config['temperature'],
+                    top_p=gemma_config['top_p'],
+                    top_k= gemma_config['top_k']
                 )
             )
             text_output = response.text.strip()
@@ -242,4 +254,4 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
     print(df_summaries)
 
 
-    create_table_from_df(df_summaries, 'cluster_summaries')
+    create_table_from_df(df_summaries, 'cluster_summaries', mode='append')
