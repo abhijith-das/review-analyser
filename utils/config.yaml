@@ -1,0 +1,17 @@
+APP_NAME: 'Review Analyser'
+VERSION: '1.0.0'
+
+AWS:
+  S3_BUCKET: 'review-analyser'
+  REGION: 'ap-south-1'
+
+SNOWFLAKE:
+  CONNECTION_NAME: 'ANALYZER_CONN'
+  ROLE: 'ANALYSER_DEV'
+
+GEMMA:
+  MODEL: 'gemma-3-27b-it'
+  TEMPERATURE: 0.1
+  TOP_P: 0.9
+  TOP_K: 40
+

@@ -1,0 +1,14 @@
+CLUSTER_SUMMARIES:
+  DATABASE: ANALYSER_DB
+  SCHEMA: ANALYSER_SCHEMA
+  TABLE: CLUSTER_SUMMARIES
+  COLUMNS:
+    CLUSTER_ID: cluster_id
+    TITLE: title
+    DESCRIPTION: description
+    TOP_REVIEWS: top_reviews
+    VOLUME_PERCENT: volume_percent
+    POSITIVE_COUNT: positive_count
+    NEGATIVE_COUNT: negative_count
+    NEUTRAL_COUNT: neutral_count
+    DATETIME: datetime

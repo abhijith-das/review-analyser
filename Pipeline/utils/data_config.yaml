@@ -1,0 +1,64 @@
+SOURCE_FILES:
+  INPUT_CSV:
+    TEXT: 'text'
+    PRODUCT: 'product'
+    RATING: 'rating'
+    REVIEW_ID: 'review_id'
+    CREATED_AT: 'created_at'
+
+CLUSTERED_REVIEWS_TBL:
+  DATABASE: ANALYSER_DB
+  SCHEMA: ANALYSER_SCHEMA
+  TABLE: CLUSTERED_REVIEWS
+  COLUMNS:
+    REVIEW_ID: 'review_id'
+    CLUSTER_ID: 'cluster_id'
+    REVIEW: 'review'
+    PRODUCT: 'product'
+    DATETIME: 'datetime'
+    IS_CLOSE_TO_CENTROID: 'is_close_to_centroid'
+    CENTROID_RANK : 'centroid_rank'
+
+CLUSTER_SUMMARIES_TBL:
+  DATABASE: ANALYSER_DB
+  SCHEMA: ANALYSER_SCHEMA
+  TABLE: CLUSTER_SUMMARIES
+  COLUMNS:
+    CLUSTER_ID: 'cluster_id'
+    TITLE: 'title'
+    DESCRIPTION: 'description'
+    TOP_REVIEWS: 'top_reviews'
+    VOLUME_PERCENT: 'volume_percent'
+    POSITIVE_COUNT: 'positive_count'
+    NEGATIVE_COUNT: 'negative_count'
+    NEUTRAL_COUNT: 'neutral_count'
+    DATETIME: 'datetime'
+
+
+PREPROCESS:
+  SOURCE:
+    S3_BUCKET: 'review-analyser'
+    PATH: 'Input'
+    FILE_NAME: 'reviews.csv'
+
+  TARGET:
+    PARQUET_FILE: 'parquets/cleaned_reviews.parquet'
+
+EMBED:
+  SOURCE:
+    PARQUET_FILE: 'parquets/cleaned_reviews.parquet'
+
+  TARGET:
+    PARQUET_FILE: 'parquets/reviews_with_embeddings.parquet'
+
+CLUSTER:
+  CLUSTERING_METHOD: 'kmeans'
+  CLUSTERING_PARAMS:
+    K: 10
+  SOURCE:
+    PARQUET_FILE: 'parquets/reviews_with_embeddings.parquet'
+
+  TARGET:
+    TABLE_NAME: 'CLUSTERED_REVIEWS'
+
+
