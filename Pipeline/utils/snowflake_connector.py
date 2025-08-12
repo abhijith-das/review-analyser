@@ -11,7 +11,20 @@ def get_snowflake_session():
     try:
         get_active_session()
     except Exception:
-
+'''
+Store the Snowflake connection details in a JSON file at the specified path.
+{
+    "snowflake": {
+        "account": "<Account ID>",
+        "user": "<User Name>",
+        "role": "<Role Name>",
+        "password": "<Password>",
+        "database": "<Database Name>",
+        "schema": "<Schema Name>",
+        "warehouse": "<Warehouse Name>"
+    }
+}
+'''
 
         with open('/home/abhi/airflow/Pipeline/utils/credentials.json', "r") as f:
             creds = json.load(f)

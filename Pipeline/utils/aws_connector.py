@@ -2,6 +2,15 @@ import json
 import boto3
 
 def get_aws_s3_client():
+    '''
+    store AWS credentials in a JSON file at the specified path.
+    {
+    "aws": {
+        "aws_access_key_id": "<your_access_key_id>",
+        "aws_secret_access_key": "<your_secret_access_key>",
+        "region": "<your_region>"
+        }
+    }'''
     # Read AWS credentials from JSON file
     with open('/home/abhi/airflow/Pipeline/utils/credentials.json', "r") as f:
         creds = json.load(f)
