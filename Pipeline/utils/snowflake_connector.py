@@ -13,7 +13,7 @@ def get_snowflake_session():
     except Exception:
 
 
-        with open('/home/abhi/airflow/Pipeline/stages/credentials.json', "r") as f:
+        with open('/home/abhi/airflow/Pipeline/utils/credentials.json', "r") as f:
             creds = json.load(f)
 
         sf = creds.get("snowflake", {})

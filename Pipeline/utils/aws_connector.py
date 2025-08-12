@@ -3,7 +3,7 @@ import boto3
 
 def get_aws_s3_client():
     # Read AWS credentials from JSON file
-    with open('/home/abhi/airflow/Pipeline/stages/credentials.json', "r") as f:
+    with open('/home/abhi/airflow/Pipeline/utils/credentials.json', "r") as f:
         creds = json.load(f)
     aws = creds.get("aws", {})
 

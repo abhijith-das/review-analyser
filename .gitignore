@@ -278,4 +278,5 @@ go-sdk/**/*.log
 
 credentials.json
 **/credentials.json
-
+credentials.json:Zone.Identifier
+**/credentials.json:Zone.Identifier

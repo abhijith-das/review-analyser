@@ -158,7 +158,7 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
     }
     '''
 
-    with open('/home/abhi/airflow/Pipeline/stages/credentials.json') as f:
+    with open('/home/abhi/airflow/Pipeline/utils/credentials.json') as f:
         credentials = json.load(f)
         api_key = credentials['gemini']['api_key']
 
@@ -275,7 +275,9 @@ def summarize_and_sentiment_analysis(db_name: str, schema_name: str, table_name:
 
 # main function for the airflow DAG
 def main():
-    summarize_and_sentiment_analysis(db_name="ANALYSER_DB",
-    schema_name="ANALYSER_SCHEMA",
-    table_name="CLUSTERED_REVIEWS"
+    rvw_tbl = get_tbl_clustered_reviews()
+    summarize_and_sentiment_analysis(
+    db_name=rvw_tbl['DATABASE'],
+    schema_name=rvw_tbl['SCHEMA'],
+    table_name= rvw_tbl['TABLE']
     )

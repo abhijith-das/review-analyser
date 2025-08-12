@@ -6,7 +6,7 @@ import json
 # Function to read a config.yaml file
 def read_config() -> dict:
     current_dir = os.getcwd()
-    config_path = os.path.join(current_dir, "utils/config.yaml")
+    config_path = os.path.join(current_dir, "Pipeline/utils/config.yaml")
     with open(config_path, 'r',  encoding="utf-8",) as file:
         config = yaml.safe_load(file)
     return config
@@ -14,7 +14,7 @@ def read_config() -> dict:
 # Function to read a data_config.yaml file
 def read_data_config() -> dict:
     current_dir = os.getcwd()
-    config_path = os.path.join(current_dir, "utils/data_config.yaml")
+    config_path = os.path.join(current_dir, "Pipeline/utils/data_config.yaml")
     with open(config_path, 'r',  encoding="utf-8",) as file:
         config = yaml.safe_load(file)
     return config
