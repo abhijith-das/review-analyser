@@ -140,3 +140,10 @@ Input Data: The raw data required for processing by the LLM is provided in this 
 Output Indicator: To make it easier for our system to parse the response, the prompt specifies a strict output format
 
 We significantly lower the likelihood of LLM hallucinations by combining these components with a zero-shot prompting strategy (because giving examples raises the likelihood of LLM hallucination for cluster reviews of different domain).  We can observe consistent outcomes by putting the previously mentioned strategies into practice.
+
+## Dashboard Screenshots
+![Dash 1](image-1.png)
+![Dash 2](image-2.png)
+![Dash 3](image.png)
+![Dash 4](image-5.png)
+![Dash 5](image-6.png)
